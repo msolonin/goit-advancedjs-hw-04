@@ -9,7 +9,7 @@ const galleryEl = document.querySelector('.js-gallery');
 const loaderEl = document.querySelector('.js-loader');
 const loadMoreBtnEl = document.querySelector('.js-load-more');
 
-const itemPerPage = 100;
+const itemPerPage = 15;
 const izitoastPosition = 'topRight';
 let commonTotalHits = 0;
 let currentPage = 1;
