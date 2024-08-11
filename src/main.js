@@ -10,6 +10,7 @@ const loaderEl = document.querySelector('.js-loader');
 const loadMoreBtnEl = document.querySelector('.js-load-more');
 
 const izitoastPosition = 'topRight';
+let commonTotalHits = 0;
 let currentPage = 1;
 let searchedValue = '';
 
@@ -18,25 +19,29 @@ let lightbox =  new SimpleLightbox('.gallery a', {
         captionDelay: 250,
         })
 
-// const renderPosts = async () => {
-//   try {
-//     const { data } = await fetchPhotos(searchedValue, currentPage);
-//     const { hits } = data;
-//     const galleryCardsTemplate = hits
-//       .map(imgInfo => createGalleryCardTemplate(imgInfo))
-//       .join('');
-//     galleryEl.innerHTML = galleryCardsTemplate;
-//     loadMoreBtnEl.classList.remove('is-hidden');
-//   } catch (err) {
-//     console.log(err);
-//   }
-// };
+const galleryCardHeight = () => {
+  const galleryCard = document.querySelector('.gallery-img');
+  if (galleryCard) {
+    return galleryCard.getBoundingClientRect().height;
+  }
+  return 0;
+}
+
 
 const onLoadMoreBtnClick = async event => {
   try {
+    if (commonTotalHits > 0 && commonTotalHits <= 15 * currentPage) {
+    iziToast.error({
+      message: 'Ми шкодуемо але всі пости закінчилися!',
+      position: izitoastPosition,
+    });
+    loadMoreBtnEl.classList.add('is-hidden');
+    return;
+    }
     currentPage++;
     const { data } = await fetchPhotos(searchedValue, currentPage);
     const { hits } = data;
+    commonTotalHits = data.totalHits;
     if (data.length === 0) {
       loadMoreBtnEl.classList.add('is-hidden');
     iziToast.error({
@@ -51,6 +56,8 @@ const onLoadMoreBtnClick = async event => {
       .join('');
     galleryEl.insertAdjacentHTML('beforeend', postCardsTemplate);
     lightbox.refresh();
+    const cardHeight = galleryCardHeight();
+    window.scrollBy({top: cardHeight * 2, behavior: 'smooth' });
   } catch (err) {
     console.log(err);
   }
@@ -72,7 +79,7 @@ const onSearchFormSubmit = event => {
   }
 
   loaderEl.classList.remove('is-hidden');
-
+  currentPage = 1;
   fetchPhotos(searchedValue, currentPage)
     .finally(() => {
       loaderEl.classList.add('is-hidden');
