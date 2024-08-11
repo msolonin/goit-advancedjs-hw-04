@@ -9,6 +9,7 @@ const galleryEl = document.querySelector('.js-gallery');
 const loaderEl = document.querySelector('.js-loader');
 const loadMoreBtnEl = document.querySelector('.js-load-more');
 
+const itemPerPage = 100;
 const izitoastPosition = 'topRight';
 let commonTotalHits = 0;
 let currentPage = 1;
@@ -30,16 +31,8 @@ const galleryCardHeight = () => {
 
 const onLoadMoreBtnClick = async event => {
   try {
-    if (commonTotalHits > 0 && commonTotalHits <= 15 * currentPage) {
-    iziToast.error({
-      message: 'Ми шкодуемо але всі пости закінчилися!',
-      position: izitoastPosition,
-    });
-    loadMoreBtnEl.classList.add('is-hidden');
-    return;
-    }
     currentPage++;
-    const { data } = await fetchPhotos(searchedValue, currentPage);
+    const { data } = await fetchPhotos(searchedValue, currentPage, itemPerPage);
     const { hits } = data;
     commonTotalHits = data.totalHits;
     if (data.length === 0) {
@@ -50,7 +43,6 @@ const onLoadMoreBtnClick = async event => {
     });
       return;
     }
-
     const postCardsTemplate = hits
       .map(imgInfo => createGalleryCardTemplate(imgInfo))
       .join('');
@@ -58,56 +50,62 @@ const onLoadMoreBtnClick = async event => {
     lightbox.refresh();
     const cardHeight = galleryCardHeight();
     window.scrollBy({top: cardHeight * 2, behavior: 'smooth' });
+    if (commonTotalHits > 0 && commonTotalHits <= itemPerPage * currentPage) {
+      iziToast.error({
+        message: 'Ми шкодуемо але всі пости закінчилися!',
+        position: izitoastPosition,
+      });
+    loadMoreBtnEl.classList.add('is-hidden');
+    return;
+    }
   } catch (err) {
-    console.log(err);
+      iziToast.error({
+      message: err,
+      position: izitoastPosition,
+    });
   }
 };
 
-const onSearchFormSubmit = event => {
-  event.preventDefault();
-
-  searchedValue = event.target.elements.user_query.value.trim();
-  loadMoreBtnEl.classList.add('is-hidden');
-  if (searchedValue === '') {
-    iziToast.error({
-      message: 'Поле для пошуку не має бути порожнім!',
-      position: izitoastPosition,
-    });
-
-    searchFormEl.reset();
-    return;
-  }
-
-  loaderEl.classList.remove('is-hidden');
-  currentPage = 1;
-  fetchPhotos(searchedValue, currentPage)
-    .finally(() => {
-      loaderEl.classList.add('is-hidden');
-    })
-    .then(({ data }) => {
-      const { hits } = data;
-      if (hits.length === 0) {
-        iziToast.error({
-          message: 'За вашим запитом, зображень не знайдено!',
-          position: 'topRight',
-        });
-
+const onSearchFormSubmit = async event => {
+    try {
+        event.preventDefault();
+        searchedValue = event.target.elements.user_query.value.trim();
+        loadMoreBtnEl.classList.add('is-hidden');
+        if (searchedValue === '') {
+          iziToast.error({
+            message: 'Поле для пошуку не має бути порожнім!',
+            position: izitoastPosition,
+          });
+          searchFormEl.reset();
+          return;
+        }
+        loaderEl.classList.remove('is-hidden');
+        currentPage = 1;
+        const { data } = await fetchPhotos(searchedValue, currentPage, itemPerPage);
+        const { hits } = data;
+        if (hits.length === 0) {
+            iziToast.error({
+              message: 'За вашим запитом, зображень не знайдено!',
+              position: 'topRight',
+            });
         searchFormEl.reset();
         galleryEl.innerHTML = '';
-
         return;
-      }
-      const galleryCardsTemplate = hits
+        }
+        const galleryCardsTemplate = hits
         .map(imgInfo => createGalleryCardTemplate(imgInfo))
         .join('');
+        galleryEl.innerHTML = galleryCardsTemplate;
+        lightbox.refresh();
+        loadMoreBtnEl.classList.remove('is-hidden');
 
-      galleryEl.innerHTML = galleryCardsTemplate;
-      lightbox.refresh();
-    loadMoreBtnEl.classList.remove('is-hidden');
-    })
-    .catch(err => {
-      console.log(err);
-    });
+        loaderEl.classList.add('is-hidden');
+    } catch (err) {
+        iziToast.error({
+        message: err,
+        position: izitoastPosition,
+      });
+    }
 };
 
 searchFormEl.addEventListener('submit', onSearchFormSubmit);
